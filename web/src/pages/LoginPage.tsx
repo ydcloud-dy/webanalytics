@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login, register } from '../lib/api'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -9,6 +10,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { refresh } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -18,6 +20,7 @@ export default function LoginPage() {
       const fn = isRegister ? register : login
       const res = await fn(email, password)
       localStorage.setItem('token', res.data.token)
+      refresh()
       navigate('/sites')
     } catch (err: any) {
       setError(err.response?.data || '发生错误，请重试')

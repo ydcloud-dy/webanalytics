@@ -24,6 +24,6 @@ RUN sed -i 's|dl-cdn.alpinelinux.org|mirrors.aliyun.com|g' /etc/apk/repositories
     apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 COPY --from=backend /webanalytics .
-COPY data/GeoLite2-City.mmdb ./data/GeoLite2-City.mmdb
+COPY data/GeoLite2-City.mmd[b] ./data/
 EXPOSE 8080
 ENTRYPOINT ["./webanalytics"]

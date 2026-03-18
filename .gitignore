@@ -3,7 +3,7 @@ webanalytics
 *.exe
 
 # Data
-data/
+data/webanalytics.db
 *.db
 
 # Node

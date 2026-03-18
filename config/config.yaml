@@ -1,0 +1,33 @@
+# Web Analytics 配置文件
+# 环境变量优先级高于此文件中的配置
+
+server:
+  port: "7777"
+  cors_allow_all: true
+
+database:
+  # ClickHouse 连接配置
+  clickhouse_dsn: "clickhouse://default:@localhost:9000/webanalytics"
+  # SQLite 存储路径 (用户/站点等元数据)
+  sqlite_path: "data/webanalytics.db"
+
+# Redis 配置 (可选, 用于缓存/会话等)
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+
+auth:
+  jwt_secret: "change-me-in-production"
+
+tracking:
+  # 事件缓冲区大小 (达到此数量后批量写入 ClickHouse)
+  buffer_size: 5000
+  # 缓冲区刷新间隔 (秒)
+  flush_interval_sec: 5
+  # GeoIP 数据库路径 (留空则禁用地理位置功能)
+  geoip_path: "/Users/dujie/go/src/github.com/ydcloud-dy/webanalytics/data/GeoLite2-City.mmdb"
+  # 本地开发时 GeoIP 回退公网 IP (留空则自动检测)
+  geoip_default_ip: ""
+
+timezone: "Asia/Shanghai"

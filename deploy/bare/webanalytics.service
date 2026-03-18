@@ -1,0 +1,23 @@
+[Unit]
+Description=WebAnalytics Server
+After=network.target clickhouse-server.service
+Wants=clickhouse-server.service
+
+[Service]
+Type=simple
+User=webanalytics
+Group=webanalytics
+WorkingDirectory=/opt/webanalytics
+ExecStart=/opt/webanalytics/webanalytics
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=65536
+
+# 环境变量（也可通过 config.yaml 配置）
+Environment=PORT=8080
+Environment=CLICKHOUSE_DSN=clickhouse://default:@localhost:9000/webanalytics
+Environment=SQLITE_PATH=/opt/webanalytics/data/webanalytics.db
+Environment=JWT_SECRET=change-me-in-production
+
+[Install]
+WantedBy=multi-user.target

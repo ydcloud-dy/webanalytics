@@ -1,0 +1,45 @@
+services:
+  clickhouse:
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/clickhouse/clickhouse-server:24.12.6.70
+    ports:
+      - "${CH_HTTP_PORT:-8123}:8123"
+      - "${CH_NATIVE_PORT:-9000}:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    environment:
+      CLICKHOUSE_DB: webanalytics
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: "${CH_PASSWORD:-}"
+      TZ: "${TZ:-Asia/Shanghai}"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  webanalytics:
+    build: .
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      PORT: "8080"
+      CLICKHOUSE_DSN: "clickhouse://default:${CH_PASSWORD:-}@clickhouse:9000/webanalytics"
+      SQLITE_PATH: "/data/webanalytics.db"
+      JWT_SECRET: "${JWT_SECRET:-change-me-in-production}"
+      TZ: "${TZ:-Asia/Shanghai}"
+      GEOIP_PATH: "/app/data/GeoLite2-City.mmdb"
+    volumes:
+      - app_data:/data
+      - ./config/config.yaml:/app/config.yaml:ro
+      - ./data/GeoLite2-City.mmdb:/app/data/GeoLite2-City.mmdb:ro
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+
+volumes:
+  clickhouse_data:
+  app_data:

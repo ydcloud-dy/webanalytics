@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Light Theme (default) ===== */
+:root {
+  /* Layout surfaces */
+  --t-bg: 248 250 252;
+  --t-card: 255 255 255;
+  --t-sidebar: 255 255 255;
+  --t-border: 226 232 240;
+  --t-hover: 241 245 249;
+  --t-input: 241 245 249;
+
+  /* Text - semantic mapping preserves visual hierarchy */
+  --t-white: 15 23 42;
+  --t-black: 255 255 255;
+  --t-gray-200: 30 41 59;
+  --t-gray-300: 51 65 85;
+  --t-gray-400: 100 116 139;
+  --t-gray-500: 148 163 184;
+  --t-gray-600: 203 213 225;
+
+  /* Accent (blue for light theme) */
+  --t-accent-50: 239 246 255;
+  --t-accent-100: 219 234 254;
+  --t-accent-200: 191 219 254;
+  --t-accent-300: 147 197 253;
+  --t-accent-400: 96 165 250;
+  --t-accent-500: 59 130 246;
+  --t-accent-600: 37 99 235;
+  --t-accent-700: 29 78 216;
+  --t-accent-800: 30 64 175;
+  --t-accent-900: 30 58 138;
+
+  /* Chart colors (hex for inline styles) */
+  --chart-grid: #e2e8f0;
+  --chart-text: #64748b;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e2e8f0;
+  --chart-tooltip-text: #1e293b;
+  --chart-line-1: #3b82f6;
+  --chart-line-2: #10b981;
+  --chart-line-3: #8b5cf6;
+
+  /* Map colors */
+  --map-default: #dde1e7;
+  --map-stroke: #c0c4cc;
+  --map-hover: #3b82f6;
+
+  color-scheme: light;
+}
+
+/* ===== Dark Gold Theme ===== */
+[data-theme="dark"] {
+  --t-bg: 26 26 46;
+  --t-card: 22 33 62;
+  --t-sidebar: 15 15 35;
+  --t-border: 42 42 74;
+  --t-hover: 30 30 58;
+  --t-input: 37 37 69;
+
+  --t-white: 255 255 255;
+  --t-black: 0 0 0;
+  --t-gray-200: 229 231 235;
+  --t-gray-300: 209 213 219;
+  --t-gray-400: 156 163 175;
+  --t-gray-500: 107 114 128;
+  --t-gray-600: 75 85 99;
+
+  --t-accent-50: 255 249 230;
+  --t-accent-100: 255 238 179;
+  --t-accent-200: 255 227 128;
+  --t-accent-300: 255 216 77;
+  --t-accent-400: 255 205 26;
+  --t-accent-500: 230 180 0;
+  --t-accent-600: 179 141 0;
+  --t-accent-700: 128 102 0;
+  --t-accent-800: 77 61 0;
+  --t-accent-900: 26 20 0;
+
+  --chart-grid: #2a2a4a;
+  --chart-text: #6b7280;
+  --chart-tooltip-bg: #16213e;
+  --chart-tooltip-border: #2a2a4a;
+  --chart-tooltip-text: #e0e0e0;
+  --chart-line-1: #e6b400;
+  --chart-line-2: #10b981;
+  --chart-line-3: #8b5cf6;
+
+  --map-default: #2a2a4a;
+  --map-stroke: #4a4a6a;
+  --map-hover: #ffcd1a;
+
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: rgb(var(--t-bg));
+  color: rgb(var(--t-white));
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgb(var(--t-bg));
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--t-border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--t-gray-400));
+}
+
+/* Recharts overrides */
+.recharts-cartesian-grid line {
+  stroke: var(--chart-grid) !important;
+}
+.recharts-text {
+  fill: var(--chart-text) !important;
+}
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: var(--chart-tooltip-bg) !important;
+  border: 1px solid var(--chart-tooltip-border) !important;
+  border-radius: 8px !important;
+}
+.recharts-tooltip-item {
+  color: var(--chart-tooltip-text) !important;
+}
+.recharts-legend-item-text {
+  color: var(--chart-text) !important;
+}

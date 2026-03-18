@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page - Web Analytics</title>
+    <!-- Replace YOUR_TRACKING_ID with your actual tracking ID -->
+    <script defer data-site-id="1" src="http://localhost:8080/sdk/tracker.js"></script>
+</head>
+<body>
+    <h1>Web Analytics Test Page</h1>
+    <p>This page tests the tracking SDK.</p>
+
+    <nav>
+        <a href="#page1" onclick="history.pushState(null, '', '/page1')">Page 1</a> |
+        <a href="#page2" onclick="history.pushState(null, '', '/page2')">Page 2</a> |
+        <a href="#page3" onclick="history.pushState(null, '', '/page3')">Page 3</a>
+    </nav>
+
+    <button onclick="wa.track('button_click', 1, {button: 'cta'})">
+        Track Custom Event
+    </button>
+
+    <h2>Verification Steps:</h2>
+    <ol>
+        <li>Open browser DevTools → Network tab</li>
+        <li>Refresh this page - should see POST to /api/collect</li>
+        <li>Click navigation links - should see SPA pageview tracking</li>
+        <li>Click the button - should see custom event tracking</li>
+    </ol>
+</body>
+</html>

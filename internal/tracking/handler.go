@@ -60,7 +60,15 @@ type CollectPayload struct {
 	DOMProcessing  int             `json:"dp"`
 	DOMComplete    int             `json:"dc"`
 	OnLoadTime     int             `json:"ol"`
-	PageLoadTime   int             `json:"plt"`
+	PageLoadTime   int               `json:"plt"`
+	ErrorMessage   string            `json:"em"`
+	ErrorSource    string            `json:"es"`
+	ErrorStack     string            `json:"est"`
+	ErrorFilename  string            `json:"ef"`
+	ErrorLineno    int               `json:"el"`
+	ErrorColno     int               `json:"ec"`
+	HTTPStatus     int               `json:"ehs"`
+	HTTPURL        string            `json:"ehu"`
 }
 
 // Collect handles POST /api/collect
@@ -103,6 +111,12 @@ func (h *Handler) Collect(w http.ResponseWriter, r *http.Request) {
 	geo := h.geoip.Lookup(clientIP)
 	refSource := ClassifyReferrer(payload.Referrer, payload.Hostname)
 
+	// Truncate error stack to 2000 chars
+	errorStack := payload.ErrorStack
+	if len(errorStack) > 2000 {
+		errorStack = errorStack[:2000]
+	}
+
 	event := Event{
 		SiteID:         uint32(siteID),
 		EventType:      payload.EventType,
@@ -141,6 +155,14 @@ func (h *Handler) Collect(w http.ResponseWriter, r *http.Request) {
 		DOMComplete:    uint32(payload.DOMComplete),
 		OnLoadTime:     uint32(payload.OnLoadTime),
 		PageLoadTime:   uint32(payload.PageLoadTime),
+		ErrorMessage:   payload.ErrorMessage,
+		ErrorSource:    payload.ErrorSource,
+		ErrorStack:     errorStack,
+		ErrorFilename:  payload.ErrorFilename,
+		ErrorLineno:    uint32(payload.ErrorLineno),
+		ErrorColno:     uint32(payload.ErrorColno),
+		HTTPStatus:     uint16(payload.HTTPStatus),
+		HTTPURL:        payload.HTTPURL,
 	}
 
 	h.buffer.Add(event)

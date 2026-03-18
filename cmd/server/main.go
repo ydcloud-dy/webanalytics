@@ -20,6 +20,7 @@ import (
 	"github.com/ydcloud-dy/webanalytics/internal/query"
 	"github.com/ydcloud-dy/webanalytics/internal/site"
 	"github.com/ydcloud-dy/webanalytics/internal/store"
+	"github.com/ydcloud-dy/webanalytics/internal/system"
 	"github.com/ydcloud-dy/webanalytics/internal/tracking"
 )
 
@@ -61,6 +62,7 @@ func main() {
 	trackingHandler := tracking.NewHandler(buffer, geoip, siteSvc, cfg.Timezone)
 	queryRepo := query.NewRepository(ch.Conn, cfg.Timezone)
 	queryHandler := query.NewHandler(queryRepo, siteSvc, cfg.Timezone)
+	systemHandler := system.NewHandler(buffer)
 
 	// Router
 	r := chi.NewRouter()
@@ -127,6 +129,9 @@ func main() {
 			// Batch member management
 			r.Post("/api/admin/batch-members", siteSvc.BatchAddMembers)
 			r.Post("/api/admin/batch-members/remove", siteSvc.BatchRemoveMembers)
+
+			// System monitoring
+			r.Get("/api/system/stats", systemHandler.Stats)
 		})
 
 		// Dashboard
@@ -137,6 +142,7 @@ func main() {
 		r.Get("/api/dashboard/{siteId}/devices", queryHandler.Devices)
 		r.Get("/api/dashboard/{siteId}/os", queryHandler.OSStats)
 		r.Get("/api/dashboard/{siteId}/geo", queryHandler.Geo)
+		r.Get("/api/dashboard/{siteId}/geo/regions", queryHandler.GeoRegions)
 		r.Get("/api/dashboard/{siteId}/pages", queryHandler.Pages)
 		r.Get("/api/dashboard/{siteId}/pages-ext", queryHandler.PagesExt)
 		r.Get("/api/dashboard/{siteId}/referrers", queryHandler.Referrers)
@@ -155,6 +161,12 @@ func main() {
 		r.Get("/api/dashboard/{siteId}/performance-overview", queryHandler.PerformanceOverview)
 		r.Get("/api/dashboard/{siteId}/performance-timeseries", queryHandler.PerformanceTimeseries)
 		r.Get("/api/dashboard/{siteId}/page-performance", queryHandler.PagePerformance)
+
+		// Errors
+		r.Get("/api/dashboard/{siteId}/error-overview", queryHandler.ErrorOverview)
+		r.Get("/api/dashboard/{siteId}/error-timeseries", queryHandler.ErrorTimeseries)
+		r.Get("/api/dashboard/{siteId}/error-groups", queryHandler.ErrorGroups)
+		r.Get("/api/dashboard/{siteId}/error-pages", queryHandler.ErrorPages)
 	})
 
 	// Health check

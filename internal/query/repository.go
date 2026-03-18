@@ -67,6 +67,12 @@ type GeoStat struct {
 	Pageviews uint64 `json:"pageviews"`
 }
 
+type RegionStat struct {
+	Region    string `json:"region"`
+	Visitors  uint64 `json:"visitors"`
+	Pageviews uint64 `json:"pageviews"`
+}
+
 type PageStat struct {
 	Pathname  string `json:"pathname"`
 	Pageviews uint64 `json:"pageviews"`
@@ -298,6 +304,33 @@ func (r *Repository) Geo(ctx context.Context, siteID uint32, dr DateRange) ([]Ge
 	for rows.Next() {
 		var s GeoStat
 		if err := rows.Scan(&s.Country, &s.Visitors, &s.Pageviews); err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	return result, nil
+}
+
+func (r *Repository) GeoRegions(ctx context.Context, siteID uint32, dr DateRange) ([]RegionStat, error) {
+	rows, err := r.conn.Query(ctx, `
+		SELECT region, uniqExact(visitor_id) AS visitors, count() AS pageviews
+		FROM events
+		WHERE site_id = ? AND event_type = 'pageview'
+		  AND timestamp >= ? AND timestamp < ?
+		  AND region != ''
+		GROUP BY region
+		ORDER BY visitors DESC
+		LIMIT 50
+	`, siteID, dr.From, dr.To)
+	if err != nil {
+		return nil, fmt.Errorf("geo regions query: %w", err)
+	}
+	defer rows.Close()
+
+	var result []RegionStat
+	for rows.Next() {
+		var s RegionStat
+		if err := rows.Scan(&s.Region, &s.Visitors, &s.Pageviews); err != nil {
 			return nil, err
 		}
 		result = append(result, s)
@@ -1163,6 +1196,167 @@ func (r *Repository) PagePerformance(ctx context.Context, siteID uint32, dr Date
 		if err := rows.Scan(&s.Pathname, &s.UniquePageviews,
 			&s.AvgNetworkTime, &s.AvgServerTime, &s.AvgTransferTime,
 			&s.AvgDOMProcessing, &s.AvgDOMComplete, &s.AvgOnLoadTime, &s.AvgPageLoadTime); err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	return result, nil
+}
+
+// Error analytics
+
+type ErrorOverviewStats struct {
+	TotalErrors    uint64  `json:"total_errors"`
+	JSErrors       uint64  `json:"js_errors"`
+	PromiseErrors  uint64  `json:"promise_errors"`
+	ResourceErrors uint64  `json:"resource_errors"`
+	HTTPErrors     uint64  `json:"http_errors"`
+	ErrorRate      float64 `json:"error_rate"`
+	AffectedPages  uint64  `json:"affected_pages"`
+}
+
+func (r *Repository) ErrorOverview(ctx context.Context, siteID uint32, dr DateRange) (*ErrorOverviewStats, error) {
+	var s ErrorOverviewStats
+	err := r.conn.QueryRow(ctx, `
+		SELECT
+			count() AS total,
+			countIf(error_source = 'js') AS js,
+			countIf(error_source = 'promise') AS promise,
+			countIf(error_source = 'resource') AS resource,
+			countIf(error_source = 'http') AS http,
+			uniqExact(pathname) AS affected_pages
+		FROM events
+		WHERE site_id = ? AND event_type = 'error'
+		  AND timestamp >= ? AND timestamp < ?
+	`, siteID, dr.From, dr.To).Scan(&s.TotalErrors, &s.JSErrors, &s.PromiseErrors, &s.ResourceErrors, &s.HTTPErrors, &s.AffectedPages)
+	if err != nil {
+		return nil, fmt.Errorf("error overview query: %w", err)
+	}
+
+	var pageviews uint64
+	_ = r.conn.QueryRow(ctx, `
+		SELECT count() FROM events
+		WHERE site_id = ? AND event_type = 'pageview'
+		  AND timestamp >= ? AND timestamp < ?
+	`, siteID, dr.From, dr.To).Scan(&pageviews)
+	if pageviews > 0 {
+		s.ErrorRate = float64(s.TotalErrors) / float64(pageviews) * 100
+	}
+
+	return &s, nil
+}
+
+type ErrorTimeseriesPoint struct {
+	Time     string `json:"time"`
+	JS       uint64 `json:"js"`
+	Promise  uint64 `json:"promise"`
+	Resource uint64 `json:"resource"`
+	HTTP     uint64 `json:"http"`
+}
+
+func (r *Repository) ErrorTimeseries(ctx context.Context, siteID uint32, dr DateRange) ([]ErrorTimeseriesPoint, error) {
+	query := fmt.Sprintf(`
+		SELECT
+			toString(toDate(toTimezone(timestamp, '%s'))) AS t,
+			countIf(error_source = 'js') AS js,
+			countIf(error_source = 'promise') AS promise,
+			countIf(error_source = 'resource') AS resource,
+			countIf(error_source = 'http') AS http
+		FROM events
+		WHERE site_id = ? AND event_type = 'error'
+		  AND timestamp >= ? AND timestamp < ?
+		GROUP BY t
+		ORDER BY t
+	`, r.tz)
+
+	rows, err := r.conn.Query(ctx, query, siteID, dr.From, dr.To)
+	if err != nil {
+		return nil, fmt.Errorf("error timeseries query: %w", err)
+	}
+	defer rows.Close()
+
+	var result []ErrorTimeseriesPoint
+	for rows.Next() {
+		var p ErrorTimeseriesPoint
+		if err := rows.Scan(&p.Time, &p.JS, &p.Promise, &p.Resource, &p.HTTP); err != nil {
+			return nil, err
+		}
+		result = append(result, p)
+	}
+	return result, nil
+}
+
+type ErrorGroupStat struct {
+	Message  string `json:"message"`
+	Source   string `json:"source"`
+	Filename string `json:"filename"`
+	Count    uint64 `json:"count"`
+	Visitors uint64 `json:"visitors"`
+	LastSeen string `json:"last_seen"`
+}
+
+func (r *Repository) ErrorGroups(ctx context.Context, siteID uint32, dr DateRange) ([]ErrorGroupStat, error) {
+	rows, err := r.conn.Query(ctx, `
+		SELECT
+			error_message,
+			error_source,
+			error_filename,
+			count() AS cnt,
+			uniqExact(visitor_id) AS visitors,
+			toString(max(timestamp)) AS last_seen
+		FROM events
+		WHERE site_id = ? AND event_type = 'error'
+		  AND timestamp >= ? AND timestamp < ?
+		GROUP BY error_message, error_source, error_filename
+		ORDER BY cnt DESC
+		LIMIT 50
+	`, siteID, dr.From, dr.To)
+	if err != nil {
+		return nil, fmt.Errorf("error groups query: %w", err)
+	}
+	defer rows.Close()
+
+	var result []ErrorGroupStat
+	for rows.Next() {
+		var s ErrorGroupStat
+		if err := rows.Scan(&s.Message, &s.Source, &s.Filename, &s.Count, &s.Visitors, &s.LastSeen); err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	return result, nil
+}
+
+type ErrorPageStat struct {
+	Pathname string `json:"pathname"`
+	Total    uint64 `json:"total"`
+	JS       uint64 `json:"js"`
+	HTTP     uint64 `json:"http"`
+}
+
+func (r *Repository) ErrorPages(ctx context.Context, siteID uint32, dr DateRange) ([]ErrorPageStat, error) {
+	rows, err := r.conn.Query(ctx, `
+		SELECT
+			pathname,
+			count() AS total,
+			countIf(error_source = 'js') AS js,
+			countIf(error_source = 'http') AS http
+		FROM events
+		WHERE site_id = ? AND event_type = 'error'
+		  AND timestamp >= ? AND timestamp < ?
+		GROUP BY pathname
+		ORDER BY total DESC
+		LIMIT 30
+	`, siteID, dr.From, dr.To)
+	if err != nil {
+		return nil, fmt.Errorf("error pages query: %w", err)
+	}
+	defer rows.Close()
+
+	var result []ErrorPageStat
+	for rows.Next() {
+		var s ErrorPageStat
+		if err := rows.Scan(&s.Pathname, &s.Total, &s.JS, &s.HTTP); err != nil {
 			return nil, err
 		}
 		result = append(result, s)

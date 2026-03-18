@@ -57,7 +57,7 @@ export default function OverviewPage() {
     setRangeDays(days)
   }
 
-  const handleDatePick = (date: string) => {
+  const handleDatePick = (date: string | null) => {
     if (date) {
       setPickedDate(date)
     } else {

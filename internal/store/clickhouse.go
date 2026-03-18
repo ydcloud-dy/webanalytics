@@ -67,6 +67,21 @@ func (s *ClickHouseStore) RunMigrations(ctx context.Context) error {
 	for _, col := range perfCols {
 		s.Conn.Exec(ctx, "ALTER TABLE events ADD COLUMN IF NOT EXISTS "+col)
 	}
+
+	// Add error tracking columns (idempotent)
+	errorCols := []string{
+		"error_message String DEFAULT ''",
+		"error_source LowCardinality(String) DEFAULT ''",
+		"error_stack String DEFAULT ''",
+		"error_filename String DEFAULT ''",
+		"error_lineno UInt32 DEFAULT 0",
+		"error_colno UInt32 DEFAULT 0",
+		"http_status UInt16 DEFAULT 0",
+		"http_url String DEFAULT ''",
+	}
+	for _, col := range errorCols {
+		s.Conn.Exec(ctx, "ALTER TABLE events ADD COLUMN IF NOT EXISTS "+col)
+	}
 	return nil
 }
 
@@ -108,7 +123,15 @@ CREATE TABLE IF NOT EXISTS events (
     dom_processing UInt32 DEFAULT 0,
     dom_complete   UInt32 DEFAULT 0,
     on_load_time   UInt32 DEFAULT 0,
-    page_load_time UInt32 DEFAULT 0
+    page_load_time UInt32 DEFAULT 0,
+    error_message  String DEFAULT '',
+    error_source   LowCardinality(String) DEFAULT '',
+    error_stack    String DEFAULT '',
+    error_filename String DEFAULT '',
+    error_lineno   UInt32 DEFAULT 0,
+    error_colno    UInt32 DEFAULT 0,
+    http_status    UInt16 DEFAULT 0,
+    http_url       String DEFAULT ''
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (site_id, event_type, timestamp, visitor_id)

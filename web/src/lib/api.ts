@@ -57,6 +57,9 @@ export const getDevices = (siteId: number, from: string, to: string) =>
 export const getGeo = (siteId: number, from: string, to: string) =>
   api.get(`/dashboard/${siteId}/geo`, { params: { from, to } }).then((r) => r.data)
 
+export const getGeoRegions = (siteId: number, from: string, to: string) =>
+  api.get(`/dashboard/${siteId}/geo/regions`, { params: { from, to } }).then((r) => r.data)
+
 export const getPages = (siteId: number, from: string, to: string) =>
   api.get(`/dashboard/${siteId}/pages`, { params: { from, to } }).then((r) => r.data)
 
@@ -100,6 +103,23 @@ export const getPagePerformance = (siteId: number, from: string, to: string) =>
 // Loyalty
 export const getLoyalty = (siteId: number, from: string, to: string) =>
   api.get(`/dashboard/${siteId}/loyalty`, { params: { from, to } }).then((r) => r.data)
+
+// Errors
+export const getErrorOverview = (siteId: number, from: string, to: string) =>
+  api.get(`/dashboard/${siteId}/error-overview`, { params: { from, to } }).then((r) => r.data)
+
+export const getErrorTimeseries = (siteId: number, from: string, to: string) =>
+  api.get(`/dashboard/${siteId}/error-timeseries`, { params: { from, to } }).then((r) => r.data)
+
+export const getErrorGroups = (siteId: number, from: string, to: string) =>
+  api.get(`/dashboard/${siteId}/error-groups`, { params: { from, to } }).then((r) => r.data)
+
+export const getErrorPages = (siteId: number, from: string, to: string) =>
+  api.get(`/dashboard/${siteId}/error-pages`, { params: { from, to } }).then((r) => r.data)
+
+// System
+export const getSystemStats = () =>
+  api.get('/system/stats').then((r) => r.data)
 
 // Auth - current user
 export const getMe = () => api.get('/auth/me').then((r) => r.data)

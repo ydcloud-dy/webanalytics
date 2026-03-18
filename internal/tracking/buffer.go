@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -48,6 +49,22 @@ type Event struct {
 	DOMComplete    uint32
 	OnLoadTime     uint32
 	PageLoadTime   uint32
+	ErrorMessage   string
+	ErrorSource    string
+	ErrorStack     string
+	ErrorFilename  string
+	ErrorLineno    uint32
+	ErrorColno     uint32
+	HTTPStatus     uint16
+	HTTPURL        string
+}
+
+type BufferMetrics struct {
+	CurrentSize       int     `json:"current_size"`
+	MaxSize           int     `json:"max_size"`
+	TotalFlushed      uint64  `json:"total_flushed"`
+	TotalErrors       uint64  `json:"total_errors"`
+	LastFlushDurationMs float64 `json:"last_flush_duration_ms"`
 }
 
 type Buffer struct {
@@ -58,6 +75,10 @@ type Buffer struct {
 	interval time.Duration
 	done     chan struct{}
 	wg       sync.WaitGroup
+
+	totalFlushed      uint64
+	totalErrors       uint64
+	lastFlushDuration int64 // nanoseconds, atomic
 }
 
 func NewBuffer(conn driver.Conn, maxSize int, interval time.Duration) *Buffer {
@@ -113,14 +134,18 @@ func (b *Buffer) flush() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	start := time.Now()
 	if err := b.insertBatch(ctx, events); err != nil {
 		log.Printf("[buffer] flush error (%d events): %v", len(events), err)
+		atomic.AddUint64(&b.totalErrors, 1)
 		b.mu.Lock()
 		b.events = append(events, b.events...)
 		b.mu.Unlock()
 	} else {
+		atomic.AddUint64(&b.totalFlushed, uint64(len(events)))
 		log.Printf("[buffer] flushed %d events", len(events))
 	}
+	atomic.StoreInt64(&b.lastFlushDuration, int64(time.Since(start)))
 }
 
 func (b *Buffer) insertBatch(ctx context.Context, events []Event) error {
@@ -131,7 +156,8 @@ func (b *Buffer) insertBatch(ctx context.Context, events []Event) error {
 		browser, browser_version, os, os_version, device_type,
 		country, region, city, lat, lon,
 		event_name, event_value, props, screen_width, screen_height, duration,
-		network_time, server_time, transfer_time, dom_processing, dom_complete, on_load_time, page_load_time
+		network_time, server_time, transfer_time, dom_processing, dom_complete, on_load_time, page_load_time,
+		error_message, error_source, error_stack, error_filename, error_lineno, error_colno, http_status, http_url
 	)`)
 	if err != nil {
 		return fmt.Errorf("prepare batch: %w", err)
@@ -149,6 +175,7 @@ func (b *Buffer) insertBatch(ctx context.Context, events []Event) error {
 			e.Country, e.Region, e.City, e.Lat, e.Lon,
 			e.EventName, e.EventValue, e.Props, e.ScreenWidth, e.ScreenHeight, e.Duration,
 			e.NetworkTime, e.ServerTime, e.TransferTime, e.DOMProcessing, e.DOMComplete, e.OnLoadTime, e.PageLoadTime,
+			e.ErrorMessage, e.ErrorSource, e.ErrorStack, e.ErrorFilename, e.ErrorLineno, e.ErrorColno, e.HTTPStatus, e.HTTPURL,
 		); err != nil {
 			return fmt.Errorf("append batch: %w", err)
 		}
@@ -159,4 +186,17 @@ func (b *Buffer) insertBatch(ctx context.Context, events []Event) error {
 func (b *Buffer) Close() {
 	close(b.done)
 	b.wg.Wait()
+}
+
+func (b *Buffer) Metrics() BufferMetrics {
+	b.mu.Lock()
+	currentSize := len(b.events)
+	b.mu.Unlock()
+	return BufferMetrics{
+		CurrentSize:       currentSize,
+		MaxSize:           b.maxSize,
+		TotalFlushed:      atomic.LoadUint64(&b.totalFlushed),
+		TotalErrors:       atomic.LoadUint64(&b.totalErrors),
+		LastFlushDurationMs: float64(atomic.LoadInt64(&b.lastFlushDuration)) / float64(time.Millisecond),
+	}
 }

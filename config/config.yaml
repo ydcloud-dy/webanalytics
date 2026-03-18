@@ -28,6 +28,6 @@ tracking:
   # GeoIP 数据库路径 (留空则禁用地理位置功能)
   geoip_path: "/Users/dujie/go/src/github.com/ydcloud-dy/webanalytics/data/GeoLite2-City.mmdb"
   # 本地开发时 GeoIP 回退公网 IP (留空则自动检测)
-  geoip_default_ip: ""
+  geoip_default_ip: "103.39.64.49"
 
 timezone: "Asia/Shanghai"

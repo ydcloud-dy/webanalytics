@@ -150,6 +150,20 @@ func (h *Handler) Geo(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, data)
 }
 
+func (h *Handler) GeoRegions(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.GeoRegions(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, data)
+}
+
 func (h *Handler) Pages(w http.ResponseWriter, r *http.Request) {
 	siteID, err := h.getSiteID(r)
 	if err != nil {
@@ -552,6 +566,71 @@ func (h *Handler) PagePerformance(w http.ResponseWriter, r *http.Request) {
 	}
 	if data == nil {
 		data = []PagePerformanceStat{}
+	}
+	writeJSON(w, data)
+}
+
+func (h *Handler) ErrorOverview(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.ErrorOverview(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, data)
+}
+
+func (h *Handler) ErrorTimeseries(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.ErrorTimeseries(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	if data == nil {
+		data = []ErrorTimeseriesPoint{}
+	}
+	writeJSON(w, data)
+}
+
+func (h *Handler) ErrorGroups(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.ErrorGroups(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	if data == nil {
+		data = []ErrorGroupStat{}
+	}
+	writeJSON(w, data)
+}
+
+func (h *Handler) ErrorPages(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.ErrorPages(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	if data == nil {
+		data = []ErrorPageStat{}
 	}
 	writeJSON(w, data)
 }

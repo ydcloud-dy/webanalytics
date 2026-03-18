@@ -226,9 +226,116 @@
   // Initial pageview
   trackPageview();
 
+  // --- Error tracking ---
+  function trackError(data) {
+    send({
+      sid: siteId,
+      t: 'error',
+      p: location.pathname,
+      h: location.hostname,
+      r: '',
+      vid: getVisitorId(),
+      ssid: getSessionId(),
+      sw: screen.width,
+      sh: screen.height,
+      em: data.message || '',
+      es: data.source || '',
+      est: data.stack || '',
+      ef: data.filename || '',
+      el: data.lineno || 0,
+      ec: data.colno || 0,
+      ehs: data.httpStatus || 0,
+      ehu: data.httpUrl || ''
+    });
+  }
+
+  // Dedup: same source+message+filename within 5s
+  var recentErrors = {};
+  function shouldTrack(source, message, filename) {
+    var key = source + '|' + (message || '') + '|' + (filename || '');
+    var now = Date.now();
+    if (recentErrors[key] && now - recentErrors[key] < 5000) return false;
+    recentErrors[key] = now;
+    return true;
+  }
+
+  // 1. JS runtime errors
+  var origOnError = window.onerror;
+  window.onerror = function(message, source, lineno, colno, error) {
+    if (shouldTrack('js', message, source)) {
+      trackError({
+        message: String(message),
+        source: 'js',
+        stack: error && error.stack ? error.stack.substring(0, 2000) : '',
+        filename: source || '',
+        lineno: lineno || 0,
+        colno: colno || 0
+      });
+    }
+    if (origOnError) origOnError.apply(this, arguments);
+  };
+
+  // 2. Unhandled promise rejections
+  window.addEventListener('unhandledrejection', function(e) {
+    var msg = e.reason ? (e.reason.message || String(e.reason)) : 'Unhandled Promise Rejection';
+    var stack = e.reason && e.reason.stack ? e.reason.stack.substring(0, 2000) : '';
+    if (shouldTrack('promise', msg, '')) {
+      trackError({ message: msg, source: 'promise', stack: stack });
+    }
+  });
+
+  // 3. Resource load errors (img/script/link)
+  window.addEventListener('error', function(e) {
+    var el = e.target;
+    if (el && el !== window && (el.tagName === 'IMG' || el.tagName === 'SCRIPT' || el.tagName === 'LINK')) {
+      var url = el.src || el.href || '';
+      if (shouldTrack('resource', url, '')) {
+        trackError({ message: 'Resource load failed: ' + url, source: 'resource', filename: url });
+      }
+    }
+  }, true);
+
+  // 4. HTTP errors (fetch + XMLHttpRequest)
+  if (window.fetch) {
+    var origFetch = window.fetch;
+    window.fetch = function() {
+      var url = arguments[0];
+      if (typeof url === 'object' && url.url) url = url.url;
+      return origFetch.apply(this, arguments).then(function(resp) {
+        if (resp.status >= 400) {
+          var u = String(url);
+          if (u.indexOf('/api/collect') === -1 && shouldTrack('http', String(resp.status), u)) {
+            trackError({ message: 'HTTP ' + resp.status, source: 'http', httpStatus: resp.status, httpUrl: u });
+          }
+        }
+        return resp;
+      });
+    };
+  }
+
+  var origXHROpen = XMLHttpRequest.prototype.open;
+  var origXHRSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    this._waUrl = url;
+    return origXHROpen.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.send = function() {
+    var xhr = this;
+    xhr.addEventListener('loadend', function() {
+      if (xhr.status >= 400) {
+        var u = String(xhr._waUrl || '');
+        if (u.indexOf('/api/collect') === -1 && shouldTrack('http', String(xhr.status), u)) {
+          trackError({ message: 'HTTP ' + xhr.status, source: 'http', httpStatus: xhr.status, httpUrl: u });
+        }
+      }
+    });
+    return origXHRSend.apply(this, arguments);
+  };
+
   // Public API
   window.wa = {
     track: trackEvent,
-    pageview: trackPageview
+    pageview: trackPageview,
+    trackError: trackError
   };
 })();

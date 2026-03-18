@@ -1,32 +1,143 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Page - Web Analytics</title>
-    <!-- Replace YOUR_TRACKING_ID with your actual tracking ID -->
-    <script defer data-site-id="1" src="http://localhost:8080/sdk/tracker.js"></script>
+    <title>测试页 - Web Analytics</title>
+    <!-- 确保 data-site-id 和端口号与你的配置一致 -->
+    <script defer data-site-id="3" src="http://localhost:7777/sdk/tracker.js"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; background: #1a1a2e; color: #e0e0e0; }
+        h1 { color: #f5c542; }
+        h2 { color: #ccc; margin-top: 30px; }
+        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .btn-js { background: #ef4444; color: white; }
+        .btn-promise { background: #f59e0b; color: black; }
+        .btn-resource { background: #3b82f6; color: white; }
+        .btn-http { background: #8b5cf6; color: white; }
+        .btn-custom { background: #10b981; color: white; }
+        .section { background: #16213e; border: 1px solid #333; border-radius: 12px; padding: 20px; margin: 15px 0; }
+        code { background: #0f3460; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+        nav a { color: #f5c542; margin-right: 15px; }
+    </style>
 </head>
 <body>
-    <h1>Web Analytics Test Page</h1>
-    <p>This page tests the tracking SDK.</p>
+    <h1>Web Analytics 测试页</h1>
+    <p>此页面用于测试 tracker SDK 的各项功能，包括错误追踪。</p>
 
     <nav>
-        <a href="#page1" onclick="history.pushState(null, '', '/page1')">Page 1</a> |
-        <a href="#page2" onclick="history.pushState(null, '', '/page2')">Page 2</a> |
-        <a href="#page3" onclick="history.pushState(null, '', '/page3')">Page 3</a>
+        <a href="#page1" onclick="history.pushState(null, '', '/page1')">页面 1</a>
+        <a href="#page2" onclick="history.pushState(null, '', '/page2')">页面 2</a>
+        <a href="#page3" onclick="history.pushState(null, '', '/page3')">页面 3</a>
     </nav>
 
-    <button onclick="wa.track('button_click', 1, {button: 'cta'})">
-        Track Custom Event
-    </button>
+    <div class="section">
+        <h2>1. 基础追踪</h2>
+        <button class="btn-custom" onclick="wa.track('button_click', 1, {button: 'cta'})">
+            发送自定义事件
+        </button>
+    </div>
 
-    <h2>Verification Steps:</h2>
-    <ol>
-        <li>Open browser DevTools → Network tab</li>
-        <li>Refresh this page - should see POST to /api/collect</li>
-        <li>Click navigation links - should see SPA pageview tracking</li>
-        <li>Click the button - should see custom event tracking</li>
-    </ol>
+    <div class="section">
+        <h2>2. 错误追踪测试</h2>
+        <p>点击按钮触发不同类型的错误，然后去仪表盘「错误追踪」页面查看数据。</p>
+
+        <button class="btn-js" onclick="triggerJSError()">
+            触发 JS 错误
+        </button>
+        <button class="btn-js" onclick="triggerTypeError()">
+            触发 TypeError
+        </button>
+        <button class="btn-promise" onclick="triggerPromiseError()">
+            触发 Promise 异常
+        </button>
+        <button class="btn-resource" onclick="triggerResourceError()">
+            触发资源加载失败
+        </button>
+        <button class="btn-http" onclick="triggerHTTPError()">
+            触发 HTTP 404 错误
+        </button>
+        <button class="btn-http" onclick="triggerHTTP500()">
+            触发 HTTP 500 错误
+        </button>
+    </div>
+
+    <div class="section">
+        <h2>3. 手动发送错误</h2>
+        <button class="btn-custom" onclick="manualError()">
+            手动调用 wa.trackError()
+        </button>
+        <p style="margin-top:10px;font-size:13px;color:#888;">
+            也可以在控制台执行：<code>wa.trackError({message: '测试错误', source: 'js'})</code>
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>验证步骤</h2>
+        <ol>
+            <li>打开浏览器开发者工具 → Network 标签</li>
+            <li>刷新此页面 - 应看到 POST 到 <code>/api/collect</code> 的 pageview 请求</li>
+            <li>点击上方的错误测试按钮 - 应看到 POST 到 <code>/api/collect</code> 的 error 请求</li>
+            <li>等待几秒（buffer 刷新），然后去仪表盘「错误追踪」页面查看数据</li>
+        </ol>
+    </div>
+
+    <script>
+        // JS 运行时错误 - 会被 window.onerror 捕获
+        function triggerJSError() {
+            // 故意引用未定义变量
+            undefinedVariable.someMethod();
+        }
+
+        // TypeError - 会被 window.onerror 捕获
+        function triggerTypeError() {
+            var obj = null;
+            obj.property;
+        }
+
+        // Promise 异常 - 会被 unhandledrejection 捕获
+        function triggerPromiseError() {
+            new Promise(function(resolve, reject) {
+                reject(new Error('测试 Promise 拒绝错误'));
+            });
+        }
+
+        // 资源加载失败 - 会被 error 事件捕获（capture 阶段）
+        function triggerResourceError() {
+            var img = document.createElement('img');
+            img.src = 'http://localhost:7777/non-existent-image-' + Date.now() + '.png';
+            document.body.appendChild(img);
+        }
+
+        // HTTP 404 错误 - 会被 fetch 包装器捕获
+        function triggerHTTPError() {
+            fetch('http://localhost:7777/api/non-existent-endpoint-' + Date.now())
+                .then(function(r) { console.log('HTTP status:', r.status); })
+                .catch(function(e) { console.log('Fetch error:', e); });
+        }
+
+        // HTTP 500 错误（模拟）
+        function triggerHTTP500() {
+            fetch('http://localhost:7777/api/dashboard/99999/overview')
+                .then(function(r) { console.log('HTTP status:', r.status); })
+                .catch(function(e) { console.log('Fetch error:', e); });
+        }
+
+        // 手动调用 trackError
+        function manualError() {
+            if (window.wa && window.wa.trackError) {
+                wa.trackError({
+                    message: '手动测试错误 - ' + new Date().toLocaleTimeString(),
+                    source: 'js',
+                    filename: 'test.html',
+                    lineno: 1,
+                    colno: 1
+                });
+                alert('已发送手动错误事件！');
+            } else {
+                alert('SDK 尚未加载，请等待页面完全加载后再试。');
+            }
+        }
+    </script>
 </body>
 </html>

@@ -45,6 +45,7 @@ const navGroups: NavGroup[] = [
       { label: '页面', path: '/pages', icon: '📄' },
       { label: '性能', path: '/performance', icon: '⚡' },
       { label: '忠诚度', path: '/loyalty', icon: '💎' },
+      { label: '错误追踪', path: '/errors', icon: '🐛' },
     ],
   },
 ]
@@ -214,6 +215,19 @@ export default function DashboardLayout() {
                   >
                     <span className="text-xs">&#128279;</span>
                     <span>成员管理</span>
+                  </NavLink>
+                  <NavLink
+                    to={basePath + '/admin/system'}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-4 py-2 text-sm rounded-l-lg transition-colors ${
+                        isActive
+                          ? 'bg-gold-500/10 text-gold-400 border-r-2 border-gold-500'
+                          : 'text-gray-400 hover:text-gray-200 hover:bg-dark-hover'
+                      }`
+                    }
+                  >
+                    <span className="text-xs">&#128200;</span>
+                    <span>系统监控</span>
                   </NavLink>
                 </div>
               )}

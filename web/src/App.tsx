@@ -13,6 +13,8 @@ import PerformancePage from './pages/PerformancePage'
 import LoyaltyPage from './pages/LoyaltyPage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminSiteMembersPage from './pages/AdminSiteMembersPage'
+import ErrorsPage from './pages/ErrorsPage'
+import SystemMonitorPage from './pages/SystemMonitorPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token')
@@ -49,8 +51,10 @@ export default function App() {
           <Route path="pages" element={<PagesPage />} />
           <Route path="performance" element={<PerformancePage />} />
           <Route path="loyalty" element={<LoyaltyPage />} />
+          <Route path="errors" element={<ErrorsPage />} />
           <Route path="admin/users" element={<AdminUsersPage />} />
           <Route path="admin/members" element={<AdminSiteMembersPage />} />
+          <Route path="admin/system" element={<SystemMonitorPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/sites" replace />} />
       </Routes>

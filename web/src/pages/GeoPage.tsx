@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getGeo } from '../lib/api'
+import { getGeo, getGeoRegions } from '../lib/api'
 import GeoMap from '../components/GeoMap'
 import { useDateRange } from '../components/DashboardLayout'
 
@@ -20,6 +20,11 @@ export default function GeoPage() {
   const geo = useQuery({
     queryKey: ['geo', id, from, to],
     queryFn: () => getGeo(id, from, to),
+  })
+
+  const regions = useQuery({
+    queryKey: ['geo-regions', id, from, to],
+    queryFn: () => getGeoRegions(id, from, to),
   })
 
   return (
@@ -90,15 +95,35 @@ export default function GeoPage() {
 
         <div className="bg-dark-card border border-dark-border rounded-xl p-6">
           <h3 className="font-bold text-white text-lg mb-4">地区</h3>
-          <p className="text-sm text-gray-500">
-            需要 GeoIP 数据库支持，配置 GEOIP_PATH 环境变量指向 MaxMind GeoLite2-City.mmdb 文件后可显示详细地区数据。
-          </p>
-          <div className="mt-4 p-4 bg-dark-hover rounded-lg border border-dark-border/50">
-            <p className="text-xs text-gold-400">配置提示</p>
-            <code className="text-xs text-gray-400 block mt-1">
-              GEOIP_PATH=/path/to/GeoLite2-City.mmdb
-            </code>
-          </div>
+          {!regions.data || regions.data.length === 0 ? (
+            <p className="text-gray-600 text-sm">暂无数据</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-gray-500 text-xs border-b border-dark-border">
+                  <th className="text-left pb-2 font-medium">地区</th>
+                  <th className="text-right pb-2 font-medium">访客数</th>
+                  <th className="text-right pb-2 font-medium">浏览量</th>
+                </tr>
+              </thead>
+              <tbody>
+                {regions.data.map((item: any, i: number) => (
+                  <tr key={item.region} className="border-b border-dark-border/50 hover:bg-dark-hover">
+                    <td className="py-2.5 text-gray-300">
+                      <span className="text-gray-600 mr-2 text-xs">{i + 1}.</span>
+                      {item.region}
+                    </td>
+                    <td className="py-2.5 text-right text-gold-400 font-medium">
+                      {item.visitors.toLocaleString()}
+                    </td>
+                    <td className="py-2.5 text-right text-gray-400">
+                      {item.pageviews.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

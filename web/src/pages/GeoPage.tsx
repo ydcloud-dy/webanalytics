@@ -2,20 +2,44 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getGeo, getGeoRegions } from '../lib/api'
 import GeoMap from '../components/GeoMap'
+import CalendarPicker from '../components/Calendar'
 import { useDateRange } from '../components/DashboardLayout'
+import ExportButton from '../components/ExportButton'
 
 function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 export default function GeoPage() {
   const { siteId } = useParams<{ siteId: string }>()
   const id = Number(siteId)
-  const { rangeDays, setRangeDays } = useDateRange()
+  const { rangeDays, setRangeDays, pickedDate, setPickedDate } = useDateRange()
+  const effectiveDays = rangeDays || 7
 
   const now = new Date()
-  const from = formatDate(new Date(now.getTime() - rangeDays * 86400000))
-  const to = formatDate(now)
+  const today = formatDate(now)
+
+  let from: string
+  let to: string
+  if (pickedDate) {
+    from = pickedDate
+    to = pickedDate
+  } else {
+    from = formatDate(new Date(now.getTime() - effectiveDays * 86400000))
+    to = today
+  }
+
+  const handleRangeDays = (days: number) => {
+    setPickedDate(null)
+    setRangeDays(days)
+  }
+
+  const handleDatePick = (date: string | null) => {
+    setPickedDate(date)
+  }
 
   const geo = useQuery({
     queryKey: ['geo', id, from, to],
@@ -29,36 +53,40 @@ export default function GeoPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-bold text-white">地理位置</h2>
           <p className="text-xs text-gray-500 mt-1">访客地理分布分析</p>
         </div>
-        <div className="flex gap-1 bg-dark-card border border-dark-border rounded-lg p-1">
-          {[
-            { label: '7天', days: 7 },
-            { label: '30天', days: 30 },
-            { label: '90天', days: 90 },
-          ].map((r) => (
-            <button
-              key={r.days}
-              onClick={() => setRangeDays(r.days)}
-              className={`px-3 py-1 rounded-md text-sm ${
-                rangeDays === r.days
-                  ? 'bg-gold-500 text-black font-medium'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <ExportButton type="geo" label="导出" />
+          <div className="flex gap-1 bg-dark-card border border-dark-border rounded-lg p-1">
+            {[
+              { label: '7天', days: 7 },
+              { label: '30天', days: 30 },
+              { label: '90天', days: 90 },
+            ].map((r) => (
+              <button
+                key={r.days}
+                onClick={() => handleRangeDays(r.days)}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  !pickedDate && effectiveDays === r.days
+                    ? 'bg-gold-500 text-black'
+                    : 'text-gray-400 hover:text-white hover:bg-dark-hover'
+                }`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <CalendarPicker pickedDate={pickedDate} onDatePick={handleDatePick} />
         </div>
       </div>
 
       {/* Full-width map */}
       <GeoMap data={geo.data} loading={geo.isLoading} />
 
-      {/* Country table */}
+      {/* Country + Region tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-dark-card border border-dark-border rounded-xl p-6">
           <h3 className="font-bold text-white text-lg mb-4">国家</h3>

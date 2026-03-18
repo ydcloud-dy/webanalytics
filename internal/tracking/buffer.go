@@ -57,6 +57,7 @@ type Event struct {
 	ErrorColno     uint32
 	HTTPStatus     uint16
 	HTTPURL        string
+	ClientIP       string
 }
 
 type BufferMetrics struct {
@@ -157,7 +158,8 @@ func (b *Buffer) insertBatch(ctx context.Context, events []Event) error {
 		country, region, city, lat, lon,
 		event_name, event_value, props, screen_width, screen_height, duration,
 		network_time, server_time, transfer_time, dom_processing, dom_complete, on_load_time, page_load_time,
-		error_message, error_source, error_stack, error_filename, error_lineno, error_colno, http_status, http_url
+		error_message, error_source, error_stack, error_filename, error_lineno, error_colno, http_status, http_url,
+		client_ip
 	)`)
 	if err != nil {
 		return fmt.Errorf("prepare batch: %w", err)
@@ -176,6 +178,7 @@ func (b *Buffer) insertBatch(ctx context.Context, events []Event) error {
 			e.EventName, e.EventValue, e.Props, e.ScreenWidth, e.ScreenHeight, e.Duration,
 			e.NetworkTime, e.ServerTime, e.TransferTime, e.DOMProcessing, e.DOMComplete, e.OnLoadTime, e.PageLoadTime,
 			e.ErrorMessage, e.ErrorSource, e.ErrorStack, e.ErrorFilename, e.ErrorLineno, e.ErrorColno, e.HTTPStatus, e.HTTPURL,
+			e.ClientIP,
 		); err != nil {
 			return fmt.Errorf("append batch: %w", err)
 		}

@@ -167,6 +167,19 @@ func main() {
 		r.Get("/api/dashboard/{siteId}/error-timeseries", queryHandler.ErrorTimeseries)
 		r.Get("/api/dashboard/{siteId}/error-groups", queryHandler.ErrorGroups)
 		r.Get("/api/dashboard/{siteId}/error-pages", queryHandler.ErrorPages)
+
+		// IP Ranking
+		r.Get("/api/dashboard/{siteId}/ip-ranking", queryHandler.IPRanking)
+
+		// Export
+		r.Get("/api/dashboard/{siteId}/export/{type}", queryHandler.ExportCSV)
+
+		// User Path
+		r.Get("/api/dashboard/{siteId}/path-overview", queryHandler.PathOverview)
+		r.Get("/api/dashboard/{siteId}/entry-pages", queryHandler.EntryPages)
+		r.Get("/api/dashboard/{siteId}/exit-pages", queryHandler.ExitPages)
+		r.Get("/api/dashboard/{siteId}/page-flow", queryHandler.PageFlow)
+
 	})
 
 	// Health check

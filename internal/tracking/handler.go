@@ -163,6 +163,7 @@ func (h *Handler) Collect(w http.ResponseWriter, r *http.Request) {
 		ErrorColno:     uint32(payload.ErrorColno),
 		HTTPStatus:     uint16(payload.HTTPStatus),
 		HTTPURL:        payload.HTTPURL,
+		ClientIP:       clientIP,
 	}
 
 	h.buffer.Add(event)
@@ -211,6 +212,7 @@ func (h *Handler) Pixel(w http.ResponseWriter, r *http.Request) {
 		City:           geo.City,
 		Lat:            geo.Lat,
 		Lon:            geo.Lon,
+		ClientIP:       clientIP,
 	}
 
 	h.buffer.Add(event)

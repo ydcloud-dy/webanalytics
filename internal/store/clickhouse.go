@@ -78,6 +78,7 @@ func (s *ClickHouseStore) RunMigrations(ctx context.Context) error {
 		"error_colno UInt32 DEFAULT 0",
 		"http_status UInt16 DEFAULT 0",
 		"http_url String DEFAULT ''",
+		"client_ip String DEFAULT ''",
 	}
 	for _, col := range errorCols {
 		s.Conn.Exec(ctx, "ALTER TABLE events ADD COLUMN IF NOT EXISTS "+col)
@@ -131,7 +132,8 @@ CREATE TABLE IF NOT EXISTS events (
     error_lineno   UInt32 DEFAULT 0,
     error_colno    UInt32 DEFAULT 0,
     http_status    UInt16 DEFAULT 0,
-    http_url       String DEFAULT ''
+    http_url       String DEFAULT '',
+    client_ip      String DEFAULT ''
 ) ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (site_id, event_type, timestamp, visitor_id)

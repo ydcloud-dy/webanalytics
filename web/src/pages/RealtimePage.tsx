@@ -201,17 +201,19 @@ export default function RealtimePage() {
           <div className="h-40 flex items-center justify-center text-gray-600">
             今日暂无足够数据生成趋势图
           </div>
-        ) : (
-          <div className="flex gap-1 h-40 items-end">
+        ) : (() => {
+          const maxVal = Math.max(...todayTS.data.map((p: any) => p.pageviews || 0), 1)
+          const barHeight = 128 // px, 柱子最大高度
+          return (
+          <div className="flex gap-1 items-end" style={{ height: 180 }}>
             {todayTS.data.map((point: any, i: number) => {
-              const max = Math.max(...todayTS.data.map((p: any) => p.pageviews || 1))
-              const h = Math.max(4, (point.pageviews / max) * 100)
+              const h = Math.max(4, (point.pageviews / maxVal) * barHeight)
               return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1" style={{ height: '100%' }}>
                   <span className="text-[10px] text-gold-400">{point.pageviews || ''}</span>
                   <div
-                    className="w-full bg-gold-500/70 rounded-t min-h-[4px]"
-                    style={{ height: `${h}%` }}
+                    className="w-full bg-gold-500/70 rounded-t"
+                    style={{ height: `${h}px` }}
                     title={`${point.time}: ${point.pageviews} 浏览量`}
                   />
                   <span className="text-[10px] text-gray-600">
@@ -221,7 +223,9 @@ export default function RealtimePage() {
               )
             })}
           </div>
-        )}
+          )
+        })()
+        }
       </div>
 
       {/* Traffic overview + Status */}

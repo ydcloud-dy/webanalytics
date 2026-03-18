@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getPagesExt, getReferrers } from '../lib/api'
 import { useDateRange } from '../components/DashboardLayout'
+import ExportButton from '../components/ExportButton'
 
 function formatDate(d: Date): string {
   return d.toISOString().slice(0, 10)
@@ -41,7 +42,10 @@ export default function PagesPage() {
           <h2 className="text-xl font-bold text-white">页面</h2>
           <p className="text-xs text-gray-500 mt-1">页面浏览数据分析</p>
         </div>
-        <div className="flex gap-1 bg-dark-card border border-dark-border rounded-lg p-1">
+        <div className="flex items-center gap-2">
+          <ExportButton type="pages" label="导出页面" />
+          <ExportButton type="referrers" label="导出来源" />
+          <div className="flex gap-1 bg-dark-card border border-dark-border rounded-lg p-1">
           {[
             { label: '7天', days: 7 },
             { label: '30天', days: 30 },
@@ -59,6 +63,7 @@ export default function PagesPage() {
               {r.label}
             </button>
           ))}
+          </div>
         </div>
       </div>
 

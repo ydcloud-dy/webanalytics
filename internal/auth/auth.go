@@ -107,6 +107,12 @@ func (s *Service) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
+			// Support token via query param for file downloads (e.g. CSV export)
+			if qToken := r.URL.Query().Get("token"); qToken != "" {
+				authHeader = "Bearer " + qToken
+			}
+		}
+		if authHeader == "" {
 			http.Error(w, "authorization required", http.StatusUnauthorized)
 			return
 		}

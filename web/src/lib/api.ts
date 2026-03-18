@@ -117,6 +117,29 @@ export const getErrorGroups = (siteId: number, from: string, to: string) =>
 export const getErrorPages = (siteId: number, from: string, to: string) =>
   api.get(`/dashboard/${siteId}/error-pages`, { params: { from, to } }).then((r) => r.data)
 
+// IP Ranking
+export const getIPRanking = (siteId: number, from: string, to: string) =>
+  api.get(`/dashboard/${siteId}/ip-ranking`, { params: { from, to } }).then((r) => r.data)
+
+// User Path
+export const getPathOverview = (siteId: number, from: string, to: string) =>
+  api.get(`/dashboard/${siteId}/path-overview`, { params: { from, to } }).then((r) => r.data)
+
+export const getEntryPages = (siteId: number, from: string, to: string) =>
+  api.get(`/dashboard/${siteId}/entry-pages`, { params: { from, to } }).then((r) => r.data)
+
+export const getExitPages = (siteId: number, from: string, to: string) =>
+  api.get(`/dashboard/${siteId}/exit-pages`, { params: { from, to } }).then((r) => r.data)
+
+export const getPageFlow = (siteId: number, from: string, to: string) =>
+  api.get(`/dashboard/${siteId}/page-flow`, { params: { from, to } }).then((r) => r.data)
+
+// Export
+export const getExportURL = (siteId: number, type: string, from: string, to: string) => {
+  const token = localStorage.getItem('token')
+  return `/api/dashboard/${siteId}/export/${type}?from=${from}&to=${to}&token=${token}`
+}
+
 // System
 export const getSystemStats = () =>
   api.get('/system/stats').then((r) => r.data)

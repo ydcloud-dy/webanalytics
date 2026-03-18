@@ -15,6 +15,8 @@ import AdminUsersPage from './pages/AdminUsersPage'
 import AdminSiteMembersPage from './pages/AdminSiteMembersPage'
 import ErrorsPage from './pages/ErrorsPage'
 import SystemMonitorPage from './pages/SystemMonitorPage'
+import IPRankingPage from './pages/IPRankingPage'
+import UserPathPage from './pages/UserPathPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token')
@@ -52,6 +54,8 @@ export default function App() {
           <Route path="performance" element={<PerformancePage />} />
           <Route path="loyalty" element={<LoyaltyPage />} />
           <Route path="errors" element={<ErrorsPage />} />
+          <Route path="ip-ranking" element={<IPRankingPage />} />
+          <Route path="user-path" element={<UserPathPage />} />
           <Route path="admin/users" element={<AdminUsersPage />} />
           <Route path="admin/members" element={<AdminSiteMembersPage />} />
           <Route path="admin/system" element={<SystemMonitorPage />} />

@@ -25,6 +25,7 @@ export default function DeviceSoftwarePage() {
   const { siteId } = useParams<{ siteId: string }>()
   const id = Number(siteId)
   const { rangeDays, setRangeDays, pickedDate, setPickedDate } = useDateRange()
+  const effectiveDays = rangeDays || 7
 
   const now = new Date()
   const today = formatDate(now)
@@ -35,7 +36,7 @@ export default function DeviceSoftwarePage() {
     from = pickedDate
     to = pickedDate
   } else {
-    from = formatDate(new Date(now.getTime() - rangeDays * 86400000))
+    from = formatDate(new Date(now.getTime() - effectiveDays * 86400000))
     to = today
   }
 
@@ -87,7 +88,7 @@ export default function DeviceSoftwarePage() {
                 key={r.days}
                 onClick={() => handleRangeDays(r.days)}
                 className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  !pickedDate && rangeDays === r.days
+                  !pickedDate && effectiveDays === r.days
                     ? 'bg-gold-500 text-black'
                     : 'text-gray-400 hover:text-white hover:bg-dark-hover'
                 }`}

@@ -6,6 +6,7 @@ import { getErrorOverview, getErrorTimeseries, getErrorGroups, getErrorPages } f
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts'
+import ExportButton from '../components/ExportButton'
 
 function formatDate(d: Date): string {
   const y = d.getFullYear()
@@ -125,6 +126,7 @@ export default function ErrorsPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-white">错误追踪</h2>
         <div className="flex items-center gap-2">
+          <ExportButton type="errors" label="导出" />
           <div className="flex gap-1 bg-dark-card border border-dark-border rounded-lg p-1">
             {RANGES.map((r) => (
               <button

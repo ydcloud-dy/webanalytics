@@ -634,3 +634,133 @@ func (h *Handler) ErrorPages(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, data)
 }
+
+func (h *Handler) IPRanking(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.IPRanking(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	if data == nil {
+		data = []IPStat{}
+	}
+	writeJSON(w, data)
+}
+
+func (h *Handler) EntryPages(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.EntryPages(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	if data == nil {
+		data = []EntryPageStat{}
+	}
+	writeJSON(w, data)
+}
+
+func (h *Handler) ExitPages(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.ExitPages(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	if data == nil {
+		data = []ExitPageStat{}
+	}
+	writeJSON(w, data)
+}
+
+func (h *Handler) PageFlow(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.PageFlow(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	if data == nil {
+		data = []PageFlowStat{}
+	}
+	writeJSON(w, data)
+}
+
+func (h *Handler) PathOverview(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.PathOverview(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, data)
+}
+
+func (h *Handler) EventOverview(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.EventOverview(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, data)
+}
+
+func (h *Handler) EventRanking(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.EventRanking(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	if data == nil {
+		data = []EventRankingStat{}
+	}
+	writeJSON(w, data)
+}
+
+func (h *Handler) EventTimeseries(w http.ResponseWriter, r *http.Request) {
+	siteID, err := h.getSiteID(r)
+	if err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	data, err := h.repo.EventTimeseries(r.Context(), siteID, h.parseDateRange(r))
+	if err != nil {
+		http.Error(w, "query error", http.StatusInternalServerError)
+		return
+	}
+	if data == nil {
+		data = []EventTimeseriesPoint{}
+	}
+	writeJSON(w, data)
+}

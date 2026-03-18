@@ -36,6 +36,7 @@ const navGroups: NavGroup[] = [
       { label: '地理位置', path: '/geo', icon: '🌍' },
       { label: '设备与软件', path: '/devices', icon: '💻' },
       { label: '访问时间', path: '/visit-time', icon: '🕐' },
+      { label: 'IP 排行', path: '/ip-ranking', icon: '🔢' },
     ],
   },
   {
@@ -46,6 +47,7 @@ const navGroups: NavGroup[] = [
       { label: '性能', path: '/performance', icon: '⚡' },
       { label: '忠诚度', path: '/loyalty', icon: '💎' },
       { label: '错误追踪', path: '/errors', icon: '🐛' },
+      { label: '用户路径', path: '/user-path', icon: '🛤' },
     ],
   },
 ]
@@ -95,7 +97,7 @@ export default function DashboardLayout() {
   const navigate = useNavigate()
   const { isAdmin } = useAuth()
   const basePath = `/dashboard/${siteId}`
-  const [rangeDays, setRangeDays] = useState(0)
+  const [rangeDays, setRangeDays] = useState(7)
   const [pickedDate, setPickedDate] = useState<string | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     '访客分析': true,

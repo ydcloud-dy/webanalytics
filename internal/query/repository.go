@@ -371,6 +371,7 @@ func (r *Repository) TopReferrers(ctx context.Context, siteID uint32, dr DateRan
 		WHERE site_id = ? AND event_type = 'pageview'
 		  AND timestamp >= ? AND timestamp < ?
 		  AND referrer != ''
+		  AND referrer_source NOT IN ('internal', 'direct')
 		GROUP BY referrer
 		ORDER BY visitors DESC
 		LIMIT 20
@@ -1362,4 +1363,302 @@ func (r *Repository) ErrorPages(ctx context.Context, siteID uint32, dr DateRange
 		result = append(result, s)
 	}
 	return result, nil
+}
+
+// IP ranking
+
+type IPStat struct {
+	IP        string `json:"ip"`
+	Pageviews uint64 `json:"pageviews"`
+	Visitors  uint64 `json:"visitors"`
+	Sessions  uint64 `json:"sessions"`
+	Country   string `json:"country"`
+	Region    string `json:"region"`
+	City      string `json:"city"`
+	LastSeen  string `json:"last_seen"`
+}
+
+func (r *Repository) IPRanking(ctx context.Context, siteID uint32, dr DateRange) ([]IPStat, error) {
+	rows, err := r.conn.Query(ctx, `
+		SELECT
+			client_ip,
+			count() AS pageviews,
+			uniqExact(visitor_id) AS visitors,
+			uniqExact(session_id) AS sessions,
+			argMax(country, timestamp) AS country,
+			argMax(region, timestamp) AS region,
+			argMax(city, timestamp) AS city,
+			toString(max(timestamp)) AS last_seen
+		FROM events
+		WHERE site_id = ? AND event_type = 'pageview'
+		  AND client_ip != ''
+		  AND timestamp >= ? AND timestamp < ?
+		GROUP BY client_ip
+		ORDER BY pageviews DESC
+		LIMIT 100
+	`, siteID, dr.From, dr.To)
+	if err != nil {
+		return nil, fmt.Errorf("ip ranking query: %w", err)
+	}
+	defer rows.Close()
+
+	var result []IPStat
+	for rows.Next() {
+		var s IPStat
+		if err := rows.Scan(&s.IP, &s.Pageviews, &s.Visitors, &s.Sessions, &s.Country, &s.Region, &s.City, &s.LastSeen); err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	return result, nil
+}
+
+// User behavior path analytics
+
+type EntryPageStat struct {
+	Pathname string `json:"pathname"`
+	Sessions uint64 `json:"sessions"`
+	Visitors uint64 `json:"visitors"`
+}
+
+func (r *Repository) EntryPages(ctx context.Context, siteID uint32, dr DateRange) ([]EntryPageStat, error) {
+	rows, err := r.conn.Query(ctx, `
+		SELECT pathname, count() AS sessions, uniqExact(visitor_id) AS visitors
+		FROM (
+			SELECT session_id, visitor_id, argMin(pathname, timestamp) AS pathname
+			FROM events
+			WHERE site_id = ? AND event_type = 'pageview'
+			  AND timestamp >= ? AND timestamp < ?
+			GROUP BY session_id, visitor_id
+		)
+		GROUP BY pathname
+		ORDER BY sessions DESC
+		LIMIT 30
+	`, siteID, dr.From, dr.To)
+	if err != nil {
+		return nil, fmt.Errorf("entry pages query: %w", err)
+	}
+	defer rows.Close()
+
+	var result []EntryPageStat
+	for rows.Next() {
+		var s EntryPageStat
+		if err := rows.Scan(&s.Pathname, &s.Sessions, &s.Visitors); err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	return result, nil
+}
+
+type ExitPageStat struct {
+	Pathname string `json:"pathname"`
+	Sessions uint64 `json:"sessions"`
+	Visitors uint64 `json:"visitors"`
+}
+
+func (r *Repository) ExitPages(ctx context.Context, siteID uint32, dr DateRange) ([]ExitPageStat, error) {
+	rows, err := r.conn.Query(ctx, `
+		SELECT pathname, count() AS sessions, uniqExact(visitor_id) AS visitors
+		FROM (
+			SELECT session_id, visitor_id, argMax(pathname, timestamp) AS pathname
+			FROM events
+			WHERE site_id = ? AND event_type = 'pageview'
+			  AND timestamp >= ? AND timestamp < ?
+			GROUP BY session_id, visitor_id
+		)
+		GROUP BY pathname
+		ORDER BY sessions DESC
+		LIMIT 30
+	`, siteID, dr.From, dr.To)
+	if err != nil {
+		return nil, fmt.Errorf("exit pages query: %w", err)
+	}
+	defer rows.Close()
+
+	var result []ExitPageStat
+	for rows.Next() {
+		var s ExitPageStat
+		if err := rows.Scan(&s.Pathname, &s.Sessions, &s.Visitors); err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	return result, nil
+}
+
+type PageFlowStat struct {
+	FromPage string `json:"from_page"`
+	ToPage   string `json:"to_page"`
+	Count    uint64 `json:"count"`
+}
+
+func (r *Repository) PageFlow(ctx context.Context, siteID uint32, dr DateRange) ([]PageFlowStat, error) {
+	rows, err := r.conn.Query(ctx, `
+		SELECT from_page, to_page, count() AS cnt
+		FROM (
+			SELECT
+				pathname AS to_page,
+				lagInFrame(pathname) OVER (PARTITION BY session_id ORDER BY timestamp) AS from_page
+			FROM events
+			WHERE site_id = ? AND event_type = 'pageview'
+			  AND timestamp >= ? AND timestamp < ?
+		)
+		WHERE from_page != '' AND from_page != to_page
+		GROUP BY from_page, to_page
+		ORDER BY cnt DESC
+		LIMIT 50
+	`, siteID, dr.From, dr.To)
+	if err != nil {
+		return nil, fmt.Errorf("page flow query: %w", err)
+	}
+	defer rows.Close()
+
+	var result []PageFlowStat
+	for rows.Next() {
+		var s PageFlowStat
+		if err := rows.Scan(&s.FromPage, &s.ToPage, &s.Count); err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	return result, nil
+}
+
+type PathOverviewStats struct {
+	TotalSessions      uint64  `json:"total_sessions"`
+	AvgPagesPerSession float64 `json:"avg_pages_per_session"`
+	SinglePageSessions uint64  `json:"single_page_sessions"`
+	SinglePageRate     float64 `json:"single_page_rate"`
+}
+
+func (r *Repository) PathOverview(ctx context.Context, siteID uint32, dr DateRange) (*PathOverviewStats, error) {
+	var s PathOverviewStats
+	err := r.conn.QueryRow(ctx, `
+		SELECT
+			count() AS total,
+			avg(pages) AS avg_pages,
+			countIf(pages = 1) AS single
+		FROM (
+			SELECT session_id, count() AS pages
+			FROM events
+			WHERE site_id = ? AND event_type = 'pageview'
+			  AND timestamp >= ? AND timestamp < ?
+			GROUP BY session_id
+		)
+	`, siteID, dr.From, dr.To).Scan(&s.TotalSessions, &s.AvgPagesPerSession, &s.SinglePageSessions)
+	if err != nil {
+		return nil, fmt.Errorf("path overview query: %w", err)
+	}
+	if s.TotalSessions > 0 {
+		s.SinglePageRate = float64(s.SinglePageSessions) / float64(s.TotalSessions) * 100
+	}
+	return &s, nil
+}
+
+// Custom event analytics
+
+type EventRankingStat struct {
+	EventName  string  `json:"event_name"`
+	Count      uint64  `json:"count"`
+	Visitors   uint64  `json:"visitors"`
+	AvgValue   float64 `json:"avg_value"`
+	TotalValue float64 `json:"total_value"`
+	LastSeen   string  `json:"last_seen"`
+}
+
+func (r *Repository) EventRanking(ctx context.Context, siteID uint32, dr DateRange) ([]EventRankingStat, error) {
+	rows, err := r.conn.Query(ctx, `
+		SELECT
+			event_name,
+			count() AS cnt,
+			uniqExact(visitor_id) AS visitors,
+			avg(event_value) AS avg_value,
+			sum(event_value) AS total_value,
+			toString(max(timestamp)) AS last_seen
+		FROM events
+		WHERE site_id = ? AND event_type = 'event'
+		  AND event_name != ''
+		  AND timestamp >= ? AND timestamp < ?
+		GROUP BY event_name
+		ORDER BY cnt DESC
+		LIMIT 50
+	`, siteID, dr.From, dr.To)
+	if err != nil {
+		return nil, fmt.Errorf("event ranking query: %w", err)
+	}
+	defer rows.Close()
+
+	var result []EventRankingStat
+	for rows.Next() {
+		var s EventRankingStat
+		if err := rows.Scan(&s.EventName, &s.Count, &s.Visitors, &s.AvgValue, &s.TotalValue, &s.LastSeen); err != nil {
+			return nil, err
+		}
+		result = append(result, s)
+	}
+	return result, nil
+}
+
+type EventTimeseriesPoint struct {
+	Time  string `json:"time"`
+	Name  string `json:"name"`
+	Count uint64 `json:"count"`
+}
+
+func (r *Repository) EventTimeseries(ctx context.Context, siteID uint32, dr DateRange) ([]EventTimeseriesPoint, error) {
+	query := fmt.Sprintf(`
+		SELECT
+			toString(toDate(toTimezone(timestamp, '%s'))) AS t,
+			event_name,
+			count() AS cnt
+		FROM events
+		WHERE site_id = ? AND event_type = 'event'
+		  AND event_name != ''
+		  AND timestamp >= ? AND timestamp < ?
+		GROUP BY t, event_name
+		ORDER BY t, cnt DESC
+	`, r.tz)
+
+	rows, err := r.conn.Query(ctx, query, siteID, dr.From, dr.To)
+	if err != nil {
+		return nil, fmt.Errorf("event timeseries query: %w", err)
+	}
+	defer rows.Close()
+
+	var result []EventTimeseriesPoint
+	for rows.Next() {
+		var p EventTimeseriesPoint
+		if err := rows.Scan(&p.Time, &p.Name, &p.Count); err != nil {
+			return nil, err
+		}
+		result = append(result, p)
+	}
+	return result, nil
+}
+
+type EventOverviewStats struct {
+	TotalEvents  uint64  `json:"total_events"`
+	UniqueEvents uint64  `json:"unique_events"`
+	TotalValue   float64 `json:"total_value"`
+	Visitors     uint64  `json:"visitors"`
+}
+
+func (r *Repository) EventOverview(ctx context.Context, siteID uint32, dr DateRange) (*EventOverviewStats, error) {
+	var s EventOverviewStats
+	err := r.conn.QueryRow(ctx, `
+		SELECT
+			count() AS total_events,
+			uniqExact(event_name) AS unique_events,
+			sum(event_value) AS total_value,
+			uniqExact(visitor_id) AS visitors
+		FROM events
+		WHERE site_id = ? AND event_type = 'event'
+		  AND event_name != ''
+		  AND timestamp >= ? AND timestamp < ?
+	`, siteID, dr.From, dr.To).Scan(&s.TotalEvents, &s.UniqueEvents, &s.TotalValue, &s.Visitors)
+	if err != nil {
+		return nil, fmt.Errorf("event overview query: %w", err)
+	}
+	return &s, nil
 }

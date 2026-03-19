@@ -1,7 +1,10 @@
 package tracking
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"image"
 	"image/color"
 	"image/gif"
@@ -111,6 +114,9 @@ func (h *Handler) Collect(w http.ResponseWriter, r *http.Request) {
 	geo := h.geoip.Lookup(clientIP)
 	refSource := ClassifyReferrer(payload.Referrer, payload.Hostname)
 
+	// Server-side stable visitor ID (IP + UA based, no daily rotation)
+	visitorID := generateVisitorID(siteID, clientIP, r.UserAgent())
+
 	// Truncate error stack to 2000 chars
 	errorStack := payload.ErrorStack
 	if len(errorStack) > 2000 {
@@ -122,7 +128,7 @@ func (h *Handler) Collect(w http.ResponseWriter, r *http.Request) {
 		EventType:      payload.EventType,
 		Timestamp:      time.Now().UTC(),
 		SessionID:      payload.SessionID,
-		VisitorID:      payload.VisitorID,
+		VisitorID:      visitorID,
 		Pathname:       payload.Pathname,
 		Hostname:       payload.Hostname,
 		Referrer:       payload.Referrer,
@@ -190,6 +196,7 @@ func (h *Handler) Pixel(w http.ResponseWriter, r *http.Request) {
 	ua := ParseUserAgent(r.UserAgent())
 	clientIP := extractIP(r)
 	geo := h.geoip.Lookup(clientIP)
+	visitorID := generateVisitorID(siteID, clientIP, r.UserAgent())
 
 	hostname := q.Get("h")
 	event := Event{
@@ -197,7 +204,7 @@ func (h *Handler) Pixel(w http.ResponseWriter, r *http.Request) {
 		EventType:      "pageview",
 		Timestamp:      time.Now().UTC(),
 		SessionID:      q.Get("ssid"),
-		VisitorID:      q.Get("vid"),
+		VisitorID:      visitorID,
 		Pathname:       q.Get("p"),
 		Hostname:       hostname,
 		Referrer:       q.Get("r"),
@@ -260,4 +267,12 @@ func isPrivateIP(ipStr string) bool {
 		return true
 	}
 	return false
+}
+
+// generateVisitorID creates a stable visitor ID from site + IP + UA.
+// No date component, so the same visitor gets the same ID across days.
+func generateVisitorID(siteID uint64, clientIP string, userAgent string) string {
+	raw := fmt.Sprintf("%d|%s|%s", siteID, clientIP, userAgent)
+	h := sha256.Sum256([]byte(raw))
+	return "v" + hex.EncodeToString(h[:8])
 }

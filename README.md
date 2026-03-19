@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="web/public/logo.png" alt="WebAnalytics Logo" width="180"/>
-</p>
+
 
 <h3 align="center">WebAnalytics —— 轻量级、隐私友好的开源网站分析平台</h3>
 

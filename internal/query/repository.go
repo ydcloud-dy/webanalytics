@@ -494,25 +494,25 @@ func (r *Repository) RealtimeStatsExtended(ctx context.Context, siteID uint32) (
 		return nil, fmt.Errorf("total pv/uv query: %w", err)
 	}
 
-	// QPS last 1 minute
+	// QPS last 1 minute (all event types)
 	err = r.conn.QueryRow(ctx, fmt.Sprintf(`
 		SELECT count() / 60.0 AS qps
 		FROM events
-		WHERE site_id = ? AND event_type = 'pageview'
+		WHERE site_id = ?
 		  AND timestamp >= now('%s') - INTERVAL 1 MINUTE
 	`, tz), siteID).Scan(&s.QPS1m)
 	if err != nil {
 		return nil, fmt.Errorf("qps 1m query: %w", err)
 	}
 
-	// Peak QPS today (by second)
+	// Peak QPS today (by second, all event types)
 	var peakTime time.Time
 	err = r.conn.QueryRow(ctx, fmt.Sprintf(`
 		SELECT max(cnt) AS peak_qps, argMax(sec, cnt) AS peak_time
 		FROM (
 			SELECT toStartOfSecond(timestamp) AS sec, toFloat64(count()) AS cnt
 			FROM events
-			WHERE site_id = ? AND event_type = 'pageview'
+			WHERE site_id = ?
 			  AND timestamp >= toStartOfDay(now('%s'), '%s')
 			GROUP BY sec
 		)
@@ -538,7 +538,7 @@ func (r *Repository) QPSTrend(ctx context.Context, siteID uint32) ([]QPSTrendPoi
 			formatDateTime(toStartOfMinute(timestamp), '%%H:%%i') AS t,
 			count() / 60.0 AS qps
 		FROM events
-		WHERE site_id = ? AND event_type = 'pageview'
+		WHERE site_id = ?
 		  AND timestamp >= toStartOfDay(now('%s'), '%s')
 		GROUP BY t
 		ORDER BY t
@@ -621,7 +621,8 @@ func (r *Repository) PerformanceOverview(ctx context.Context, siteID uint32, dr 
 			count()
 		FROM events
 		WHERE site_id = ? AND event_type = 'performance'
-		  AND page_load_time > 0
+		  AND page_load_time > 0 AND page_load_time < 60000
+		  AND network_time >= 0 AND network_time < 60000
 		  AND timestamp >= ? AND timestamp < ?
 	`, siteID, dr.From, dr.To).Scan(
 		&s.AvgNetworkTime, &s.AvgServerTime, &s.AvgTransferTime,
@@ -670,7 +671,8 @@ func (r *Repository) PerformanceTimeseries(ctx context.Context, siteID uint32, d
 			count()
 		FROM events
 		WHERE site_id = ? AND event_type = 'performance'
-		  AND page_load_time > 0
+		  AND page_load_time > 0 AND page_load_time < 60000
+		  AND network_time >= 0 AND network_time < 60000
 		  AND timestamp >= ? AND timestamp < ?
 		GROUP BY t
 		ORDER BY t
@@ -1172,7 +1174,8 @@ func (r *Repository) PagePerformance(ctx context.Context, siteID uint32, dr Date
 				avg(page_load_time) AS avg_plt
 			FROM events
 			WHERE site_id = ? AND event_type = 'performance'
-			  AND page_load_time > 0
+			  AND page_load_time > 0 AND page_load_time < 60000
+			  AND network_time >= 0 AND network_time < 60000
 			  AND timestamp >= ? AND timestamp < ?
 			GROUP BY pathname
 		) AS perf

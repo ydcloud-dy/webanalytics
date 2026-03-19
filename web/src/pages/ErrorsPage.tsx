@@ -1,3 +1,4 @@
+import { useState, Fragment } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useDateRange } from '../components/DashboardLayout'
@@ -60,6 +61,7 @@ export default function ErrorsPage() {
   const { siteId } = useParams<{ siteId: string }>()
   const id = Number(siteId)
   const { rangeDays, setRangeDays, pickedDate, setPickedDate } = useDateRange()
+  const [expandedRow, setExpandedRow] = useState<number | null>(null)
 
   const now = new Date()
 
@@ -201,8 +203,13 @@ export default function ErrorsPage() {
             </thead>
             <tbody>
               {(groups.data ?? []).map((g: ErrorGroup, i: number) => (
-                <tr key={i} className="border-b border-dark-border/50 hover:bg-dark-hover">
-                  <td className="py-2 px-3 text-gray-300 max-w-xs truncate" title={g.message}>
+                <Fragment key={i}>
+                <tr
+                  className="border-b border-dark-border/50 hover:bg-dark-hover cursor-pointer"
+                  onClick={() => setExpandedRow(expandedRow === i ? null : i)}
+                >
+                  <td className="py-2 px-3 text-gray-300 max-w-xs truncate">
+                    <span className="mr-1 text-gray-600 text-xs">{expandedRow === i ? '▼' : '▶'}</span>
                     {g.message || '-'}
                   </td>
                   <td className="py-2 px-3">
@@ -213,13 +220,30 @@ export default function ErrorsPage() {
                       {sourceLabel[g.source] || g.source}
                     </span>
                   </td>
-                  <td className="py-2 px-3 text-gray-400 max-w-[200px] truncate" title={g.filename}>
+                  <td className="py-2 px-3 text-gray-400 max-w-[200px] truncate">
                     {g.filename || '-'}
                   </td>
                   <td className="py-2 px-3 text-right text-white font-medium">{g.count.toLocaleString()}</td>
                   <td className="py-2 px-3 text-right text-gray-400">{g.visitors.toLocaleString()}</td>
                   <td className="py-2 px-3 text-right text-gray-500 text-xs">{g.last_seen}</td>
                 </tr>
+                {expandedRow === i && (
+                  <tr className="bg-dark-hover/50">
+                    <td colSpan={6} className="px-3 py-4">
+                      <div className="space-y-3 text-sm">
+                        <DetailBlock label="错误信息" value={g.message} />
+                        <DetailBlock label="文件" value={g.filename} />
+                        <div className="flex gap-4 text-xs text-gray-500">
+                          <span>类型: {sourceLabel[g.source] || g.source}</span>
+                          <span>次数: {g.count}</span>
+                          <span>影响访客: {g.visitors}</span>
+                          <span>最近发生: {g.last_seen}</span>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
               {!groups.isLoading && (groups.data ?? []).length === 0 && (
                 <tr>
@@ -285,6 +309,36 @@ function Card({ label, value, color, loading }: { label: string; value: string |
       ) : (
         <div className={`text-2xl font-bold ${color}`}>{typeof value === 'number' ? value.toLocaleString() : value}</div>
       )}
+    </div>
+  )
+}
+
+function DetailBlock({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false)
+  if (!value) return null
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-gray-500 text-xs">{label}</span>
+        <button
+          onClick={handleCopy}
+          className="text-xs px-2 py-0.5 rounded bg-dark-border text-gray-400 hover:text-white hover:bg-dark-card transition-colors"
+        >
+          {copied ? '已复制' : '复制'}
+        </button>
+      </div>
+      <div className="bg-[#0d1117] border border-dark-border rounded-lg p-3 text-gray-300 text-xs font-mono break-all whitespace-pre-wrap select-all max-h-40 overflow-y-auto">
+        {value}
+      </div>
     </div>
   )
 }

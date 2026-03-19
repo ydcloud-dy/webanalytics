@@ -57,15 +57,16 @@
     };
   }
 
-  // Send data
+  // Send data (cross-origin safe: use text/plain to avoid CORS preflight)
   function send(data) {
     var payload = JSON.stringify(data);
     if (navigator.sendBeacon) {
-      navigator.sendBeacon(endpoint, payload);
+      var blob = new Blob([payload], { type: 'text/plain' });
+      navigator.sendBeacon(endpoint, blob);
     } else {
       var xhr = new XMLHttpRequest();
       xhr.open('POST', endpoint, true);
-      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Content-Type', 'text/plain');
       xhr.send(payload);
     }
   }
@@ -157,16 +158,24 @@
     if (typeof plt === 'undefined' && performance.timing) {
       var t = performance.timing;
       var s = t.navigationStart;
-      nt = t.connectEnd - s;
-      st = t.responseStart - t.requestStart;
-      tt = t.responseEnd - t.responseStart;
-      dp = t.domInteractive - t.responseEnd;
-      dc = t.domComplete - t.domInteractive;
-      ol = t.loadEventEnd - t.loadEventStart;
-      plt = t.loadEventEnd - s;
+      if (s > 0 && t.connectEnd > 0) nt = t.connectEnd - s; else nt = 0;
+      if (t.requestStart > 0 && t.responseStart > 0) st = t.responseStart - t.requestStart; else st = 0;
+      if (t.responseStart > 0 && t.responseEnd > 0) tt = t.responseEnd - t.responseStart; else tt = 0;
+      if (t.responseEnd > 0 && t.domInteractive > 0) dp = t.domInteractive - t.responseEnd; else dp = 0;
+      if (t.domInteractive > 0 && t.domComplete > 0) dc = t.domComplete - t.domInteractive; else dc = 0;
+      if (t.loadEventStart > 0 && t.loadEventEnd > 0) ol = t.loadEventEnd - t.loadEventStart; else ol = 0;
+      if (s > 0 && t.loadEventEnd > 0) plt = t.loadEventEnd - s; else plt = 0;
     }
 
     if (!plt || plt <= 0) return;
+
+    // Sanity check: discard values that are negative or exceed 60s (60000ms)
+    function clamp(v) { return (v > 0 && v < 60000) ? v : 0; }
+    nt = clamp(nt); st = clamp(st); tt = clamp(tt);
+    dp = clamp(dp); dc = clamp(dc); ol = clamp(ol);
+    plt = clamp(plt);
+
+    if (plt === 0) return;
 
     send({
       sid: siteId,
@@ -178,13 +187,13 @@
       ssid: getSessionId(),
       sw: screen.width,
       sh: screen.height,
-      nt: nt || 0,
-      st: st || 0,
-      tt: tt || 0,
-      dp: dp || 0,
-      dc: dc || 0,
-      ol: ol || 0,
-      plt: plt || 0
+      nt: nt,
+      st: st,
+      tt: tt,
+      dp: dp,
+      dc: dc,
+      ol: ol,
+      plt: plt
     });
   }
 

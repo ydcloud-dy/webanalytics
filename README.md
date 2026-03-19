@@ -95,6 +95,21 @@ WebAnalytics 是一个功能完整的**开源网站分析平台**，采用 Go + 
 | 👤 成员管理 | 站点成员分配、批量操作、角色控制 |
 | 🛡️ 权限矩阵 | 全局角色 + 站点角色双层 RBAC 精细控制 |
 
+### 📜 项目演示图
+  <table>
+    <tr>
+      <td><img src="./images/dashboard.png" alt="概览"/></td>
+      <td><img src="./images/dashboard2.png" alt="概览"/></td>
+    </tr>
+    <tr>
+      <td><img src="./images/actual_time.png" alt="实时访问"/></td>
+      <td><img src="./images/location.png" alt="位置"/></td>
+    </tr>
+    <tr>
+      <td><img src="./images/error.png" alt="错误追踪"/></td>
+      <td><img src="./images/ip.png" alt="ip排行"/></td>
+    </tr>
+  </table>
 ---
 
 ## 🛠️ 技术栈
@@ -200,9 +215,8 @@ CGO_ENABLED=0 go build -o bin/webanalytics ./cmd/server/
 
 | 部署方式 | 适用场景 | 复杂度 |
 |:---------|:---------|:-------|
-| Docker Compose | 快速体验、开发测试 | ⭐ 简单 |
+| Docker Compose | 快速体验、开发测试、生产部署 | ⭐ 简单 |
 | 源码编译 | 开发调试、二次开发 | ⭐⭐ 中等 |
-| Kubernetes Helm | 生产环境、高可用部署 | ⭐⭐⭐ 中等 |
 
 ---
 
@@ -499,8 +513,7 @@ webanalytics/
 │   └── config.yaml             # 配置模板
 ├── deploy/
 │   ├── docker/                 # Docker 部署
-│   ├── bare/                   # 裸机部署
-│   └── helm/                   # Kubernetes Helm Chart
+│   └── bare/                   # 裸机部署
 ├── docker-compose.yml
 ├── Dockerfile
 ├── Makefile

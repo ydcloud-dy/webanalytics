@@ -127,7 +127,7 @@ export default function RealtimePage() {
           )}
         </div>
 
-        {/* Realtime QPS */}
+        {/* 实时 QPS */}
         <div className="bg-dark-card border border-dark-border rounded-xl p-5 text-center">
           <p className="text-gray-500 text-xs mb-1">实时 QPS</p>
           <p className="text-3xl font-bold text-gold-400">
@@ -151,10 +151,10 @@ export default function RealtimePage() {
         </div>
       </div>
 
-      {/* QPS Trend Chart */}
+      {/* QPS 趋势 */}
       <div className="bg-dark-card border border-dark-border rounded-xl p-6">
         <h3 className="font-bold text-white text-lg mb-2">QPS 趋势</h3>
-        <p className="text-xs text-gray-500 mb-4">今日按分钟的每秒请求量</p>
+        <p className="text-xs text-gray-500 mb-4">今日按分钟统计的每秒请求量（含所有事件类型）</p>
         {!qpsTrend.data || qpsTrend.data.length === 0 ? (
           <div className="h-48 flex items-center justify-center text-gray-600">
             暂无足够数据生成 QPS 趋势图

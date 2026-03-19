@@ -22,7 +22,7 @@ services:
       retries: 10
 
   webanalytics:
-    image: webanalytics:latest
+    image: docker.1ms.run/dyclouds/webanalytics
     ports:
       - "${APP_PORT:-8080}:8080"
     environment:
